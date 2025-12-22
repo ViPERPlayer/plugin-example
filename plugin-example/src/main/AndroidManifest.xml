@@ -17,19 +17,15 @@
             <intent-filter>
                 <action android:name="com.viperplayer.plugin.PLUGIN_SERVICE" />
             </intent-filter>
-            
-            <!-- Plugin metadata -->
-            <meta-data
-                android:name="com.viperplayer.plugin.API_VERSION"
-                android:value="1" />
-            <meta-data
-                android:name="com.viperplayer.plugin.NAME"
-                android:value="Demo Music Plugin" />
-            <meta-data
-                android:name="com.viperplayer.plugin.DESCRIPTION"
-                android:value="A demo plugin with sample music for testing" />
         </service>
-        
+
+        <!-- Plugin metadata -->
+        <meta-data
+            android:name="com.viperplayer.plugin.NAME"
+            android:value="Demo Music Plugin" />
+        <meta-data
+            android:name="com.viperplayer.plugin.DESCRIPTION"
+            android:value="A demo plugin with sample music for testing" />
     </application>
 
 </manifest>
