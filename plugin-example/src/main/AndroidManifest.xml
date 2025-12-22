@@ -5,8 +5,31 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.ViPERPlayer" />
+        android:roundIcon="@mipmap/ic_launcher_round">
+        
+        <!-- Plugin Service - This is what the host app discovers and binds to -->
+        <service
+            android:name=".DemoPluginService"
+            android:exported="true"
+            android:enabled="true">
+            
+            <!-- Intent filter for plugin discovery -->
+            <intent-filter>
+                <action android:name="com.viperplayer.plugin.PLUGIN_SERVICE" />
+            </intent-filter>
+            
+            <!-- Plugin metadata -->
+            <meta-data
+                android:name="com.viperplayer.plugin.API_VERSION"
+                android:value="1" />
+            <meta-data
+                android:name="com.viperplayer.plugin.NAME"
+                android:value="Demo Music Plugin" />
+            <meta-data
+                android:name="com.viperplayer.plugin.DESCRIPTION"
+                android:value="A demo plugin with sample music for testing" />
+        </service>
+        
+    </application>
 
 </manifest>
