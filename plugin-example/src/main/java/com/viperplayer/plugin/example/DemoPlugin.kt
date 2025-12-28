@@ -1,8 +1,27 @@
 package com.viperplayer.plugin.example
 
-import com.viperplayer.plugin.aidl.*
-import com.viperplayer.plugin.sdk.*
-import kotlinx.coroutines.*
+import com.viperplayer.plugin.aidl.Album
+import com.viperplayer.plugin.aidl.AlbumType
+import com.viperplayer.plugin.aidl.Artist
+import com.viperplayer.plugin.aidl.AudioFormat
+import com.viperplayer.plugin.aidl.BrowseCategory
+import com.viperplayer.plugin.aidl.CategoryContentType
+import com.viperplayer.plugin.aidl.MediaId
+import com.viperplayer.plugin.aidl.Playlist
+import com.viperplayer.plugin.aidl.PluginCapabilities
+import com.viperplayer.plugin.aidl.SearchResult
+import com.viperplayer.plugin.aidl.Song
+import com.viperplayer.plugin.sdk.AudioStreamWriter
+import com.viperplayer.plugin.sdk.HostController
+import com.viperplayer.plugin.sdk.NotFoundException
+import com.viperplayer.plugin.sdk.PagedResult
+import com.viperplayer.plugin.sdk.ViperPlugin
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Demo plugin that provides fake music data for testing.
@@ -41,6 +60,16 @@ class DemoPlugin : ViperPlugin {
     }
     
     // ==================== Search ====================
+
+    override suspend fun getSearchSuggestions(query: String): List<String> {
+        val results = mutableListOf<String>()
+
+        for (i in 0..10) {
+            results.add("$query $i")
+        }
+
+        return results
+    }
     
     override suspend fun search(
         query: String,
