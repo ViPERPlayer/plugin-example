@@ -40,7 +40,7 @@ android {
 }
 
 dependencies {
-    // Plugin SDK - this is what plugin developers include
+    // Plugin SDK
     implementation(project(":plugin-sdk"))
     
     implementation(libs.androidx.core.ktx)

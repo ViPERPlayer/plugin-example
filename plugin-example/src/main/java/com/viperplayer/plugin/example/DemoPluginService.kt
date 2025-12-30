@@ -1,5 +1,6 @@
 package com.viperplayer.plugin.example
 
+import android.content.Context
 import com.viperplayer.plugin.sdk.ViperPlugin
 import com.viperplayer.plugin.sdk.ViperPluginService
 
@@ -10,6 +11,6 @@ import com.viperplayer.plugin.sdk.ViperPluginService
  */
 class DemoPluginService : ViperPluginService() {
     
-    override fun createPlugin(): ViperPlugin = DemoPlugin()
+    override fun createPlugin(context: Context): ViperPlugin = DemoPlugin()
 }
 

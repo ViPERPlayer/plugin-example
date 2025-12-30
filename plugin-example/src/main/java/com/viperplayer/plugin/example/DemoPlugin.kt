@@ -10,7 +10,7 @@ import com.viperplayer.plugin.sdk.v1.Artist
 import com.viperplayer.plugin.sdk.v1.AudioFormat
 import com.viperplayer.plugin.sdk.v1.BrowseCategory
 import com.viperplayer.plugin.sdk.v1.CategoryContentType
-import com.viperplayer.plugin.sdk.v1.HostController
+import com.viperplayer.plugin.sdk.v1.IHostCallbackV1
 import com.viperplayer.plugin.sdk.v1.MediaId
 import com.viperplayer.plugin.sdk.v1.Playlist
 import com.viperplayer.plugin.sdk.v1.PluginCapabilities
@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
  */
 class DemoPlugin : ViperPlugin {
     
-    private var host: HostController? = null
+    private var host: IHostCallbackV1? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val activeStreams = mutableMapOf<String, Job>()
     
@@ -49,8 +49,8 @@ class DemoPlugin : ViperPlugin {
         supportedQualities = listOf(128, 256, 320)
     )
     
-    override suspend fun onConnect(host: HostController) {
-        this.host = host
+    override suspend fun onConnect(hostCallback: IHostCallbackV1) {
+        this.host = hostCallback
     }
     
     override suspend fun onDisconnect() {
@@ -64,8 +64,8 @@ class DemoPlugin : ViperPlugin {
     override suspend fun getSearchSuggestions(query: String): List<String> {
         val results = mutableListOf<String>()
 
-        for (i in 0..10) {
-            results.add("$query $i")
+        for (i in 0..2) {
+//            results.add("Example suggestion $i ($query)")
         }
 
         return results
@@ -234,7 +234,7 @@ class DemoPlugin : ViperPlugin {
             ?: throw NotFoundException("Playlist not found: $mediaId")
         
         // Get songs for this specific playlist
-        val playlistSongs = PLAYLIST_SONGS[playlist.id.sourceId] ?: emptyList()
+        val playlistSongs = PLAYLIST_SONGS[playlist.id.sourceId].orEmpty()
         return playlist.copy(songs = playlistSongs)
     }
     
@@ -248,7 +248,7 @@ class DemoPlugin : ViperPlugin {
             ?: throw NotFoundException("Playlist not found: $playlistId")
         
         // Get songs for this specific playlist
-        val playlistSongs = PLAYLIST_SONGS[playlistId.sourceId] ?: emptyList()
+        val playlistSongs = PLAYLIST_SONGS[playlistId.sourceId].orEmpty()
         val paginatedSongs = playlistSongs.drop(cursor?.toIntOrNull() ?: 0).take(limit)
         val nextCursor = if (paginatedSongs.size < playlistSongs.size - (cursor?.toIntOrNull() ?: 0)) {
             ((cursor?.toIntOrNull() ?: 0) + limit).toString()
