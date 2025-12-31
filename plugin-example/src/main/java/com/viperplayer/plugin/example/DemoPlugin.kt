@@ -15,6 +15,7 @@ import com.viperplayer.plugin.sdk.v1.MediaId
 import com.viperplayer.plugin.sdk.v1.Playlist
 import com.viperplayer.plugin.sdk.v1.PluginCapabilities
 import com.viperplayer.plugin.sdk.v1.SearchResult
+import com.viperplayer.plugin.sdk.v1.SearchSuggestionsResultV1
 import com.viperplayer.plugin.sdk.v1.Song
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,14 +62,8 @@ class DemoPlugin : ViperPlugin {
     
     // ==================== Search ====================
 
-    override suspend fun getSearchSuggestions(query: String): List<String> {
-        val results = mutableListOf<String>()
-
-        for (i in 0..2) {
-//            results.add("Example suggestion $i ($query)")
-        }
-
-        return results
+    override suspend fun getSearchSuggestions(query: String): SearchSuggestionsResultV1 {
+        TODO("Not yet implemented")
     }
     
     override suspend fun search(
@@ -184,13 +179,13 @@ class DemoPlugin : ViperPlugin {
     
     override suspend fun getSong(mediaId: MediaId): Song {
         delay(50)
-        return DEMO_SONGS.find { it.id == mediaId }
+        return DEMO_SONGS.find { it.id == mediaId.sourceId }
             ?: throw NotFoundException("Song not found: $mediaId")
     }
     
     override suspend fun getAlbum(mediaId: MediaId): Album {
         delay(50)
-        val album = DEMO_ALBUMS.find { it.id == mediaId }
+        val album = DEMO_ALBUMS.find { it.id == mediaId.sourceId }
             ?: throw NotFoundException("Album not found: $mediaId")
         
         // Return album with tracks populated
@@ -200,7 +195,7 @@ class DemoPlugin : ViperPlugin {
     
     override suspend fun getArtist(mediaId: MediaId): Artist {
         delay(50)
-        return DEMO_ARTISTS.find { it.id == mediaId }
+        return DEMO_ARTISTS.find { it.id == mediaId.sourceId }
             ?: throw NotFoundException("Artist not found: $mediaId")
     }
     
@@ -211,7 +206,7 @@ class DemoPlugin : ViperPlugin {
     ): PagedResult<Song> {
         delay(100)
         val songs = DEMO_SONGS.filter { song ->
-            song.artists.any { it.id == artistId }
+            song.artists.any { it.id == artistId.sourceId }
         }.take(limit)
         return PagedResult(songs)
     }
@@ -223,18 +218,18 @@ class DemoPlugin : ViperPlugin {
     ): PagedResult<Album> {
         delay(100)
         val albums = DEMO_ALBUMS.filter { album ->
-            album.artists.any { it.id == artistId }
+            album.artists.any { it.id == artistId.sourceId }
         }.take(limit)
         return PagedResult(albums)
     }
     
     override suspend fun getPlaylist(mediaId: MediaId): Playlist {
         delay(50)
-        val playlist = DEMO_PLAYLISTS.find { it.id == mediaId }
+        val playlist = DEMO_PLAYLISTS.find { it.id == mediaId.sourceId }
             ?: throw NotFoundException("Playlist not found: $mediaId")
         
         // Get songs for this specific playlist
-        val playlistSongs = PLAYLIST_SONGS[playlist.id.sourceId].orEmpty()
+        val playlistSongs = PLAYLIST_SONGS[playlist.id].orEmpty()
         return playlist.copy(songs = playlistSongs)
     }
     
@@ -244,7 +239,7 @@ class DemoPlugin : ViperPlugin {
         limit: Int
     ): PagedResult<Song> {
         delay(100)
-        val playlist = DEMO_PLAYLISTS.find { it.id == playlistId }
+        val playlist = DEMO_PLAYLISTS.find { it.id == playlistId.sourceId }
             ?: throw NotFoundException("Playlist not found: $playlistId")
         
         // Get songs for this specific playlist
@@ -265,14 +260,14 @@ class DemoPlugin : ViperPlugin {
         val writer = AudioStreamWriter.create(
             mediaId = mediaId,
             format = AudioFormat.CD_QUALITY,
-            durationMs = song.durationMs,
+            durationMs = song.durationMs ?: 0L,
             canSeek = true
         )
         
         // Start streaming in background
         val job = scope.launch {
             try {
-                streamSilence(writer, song.durationMs)
+                streamSilence(writer, song.durationMs ?: 0L)
             } catch (e: Exception) {
                 // Stream ended or was cancelled
             } finally {
@@ -321,49 +316,49 @@ class DemoPlugin : ViperPlugin {
         // Demo data
         private val DEMO_ARTISTS = listOf(
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-1"),
+                id = "artist-1",
                 name = "The Midnight",
                 imageUrl = "https://picsum.photos/seed/artist1/300/300",
                 genres = listOf("Synthwave", "Electronic", "Retrowave"),
                 followerCount = 500000
             ),
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-2"),
+                id = "artist-2",
                 name = "FM-84",
                 imageUrl = "https://picsum.photos/seed/artist2/300/300",
                 genres = listOf("Synthwave", "Retrowave", "Pop"),
                 followerCount = 250000
             ),
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-3"),
+                id = "artist-3",
                 name = "Gunship",
                 imageUrl = "https://picsum.photos/seed/artist3/300/300",
                 genres = listOf("Synthwave", "Darksynth", "Electronic"),
                 followerCount = 350000
             ),
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-4"),
+                id = "artist-4",
                 name = "Timecop1983",
                 imageUrl = "https://picsum.photos/seed/artist4/300/300",
                 genres = listOf("Synthwave", "Retrowave", "Ambient"),
                 followerCount = 180000
             ),
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-5"),
+                id = "artist-5",
                 name = "Carpenter Brut",
                 imageUrl = "https://picsum.photos/seed/artist5/300/300",
                 genres = listOf("Darksynth", "Synthwave", "Electronic"),
                 followerCount = 420000
             ),
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-6"),
+                id = "artist-6",
                 name = "Perturbator",
                 imageUrl = "https://picsum.photos/seed/artist6/300/300",
                 genres = listOf("Darksynth", "Electronic", "Industrial"),
                 followerCount = 380000
             ),
             Artist(
-                id = MediaId(PLUGIN_ID, "artist-7"),
+                id = "artist-7",
                 name = "Kavinsky",
                 imageUrl = "https://picsum.photos/seed/artist7/300/300",
                 genres = listOf("Synthwave", "Electronic", "Retrowave"),
@@ -373,7 +368,7 @@ class DemoPlugin : ViperPlugin {
         
         private val DEMO_ALBUMS = listOf(
             Album(
-                id = MediaId(PLUGIN_ID, "album-1"),
+                id = "album-1",
                 name = "Nocturnal",
                 artists = listOf(DEMO_ARTISTS[0]),
                 artworkUrl = "https://picsum.photos/seed/album1/500/500",
@@ -382,7 +377,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-2"),
+                id = "album-2",
                 name = "Atlas",
                 artists = listOf(DEMO_ARTISTS[1]),
                 artworkUrl = "https://picsum.photos/seed/album2/500/500",
@@ -391,7 +386,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-3"),
+                id = "album-3",
                 name = "Dark All Day",
                 artists = listOf(DEMO_ARTISTS[2]),
                 artworkUrl = "https://picsum.photos/seed/album3/500/500",
@@ -400,7 +395,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-4"),
+                id = "album-4",
                 name = "Kids",
                 artists = listOf(DEMO_ARTISTS[0]),
                 artworkUrl = "https://picsum.photos/seed/album4/500/500",
@@ -409,7 +404,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-5"),
+                id = "album-5",
                 name = "Leather Teeth",
                 artists = listOf(DEMO_ARTISTS[4]),
                 artworkUrl = "https://picsum.photos/seed/album5/500/500",
@@ -418,7 +413,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-6"),
+                id = "album-6",
                 name = "Dangerous Days",
                 artists = listOf(DEMO_ARTISTS[5]),
                 artworkUrl = "https://picsum.photos/seed/album6/500/500",
@@ -427,7 +422,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-7"),
+                id = "album-7",
                 name = "OutRun",
                 artists = listOf(DEMO_ARTISTS[6]),
                 artworkUrl = "https://picsum.photos/seed/album7/500/500",
@@ -436,7 +431,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-8"),
+                id = "album-8",
                 name = "Reflections",
                 artists = listOf(DEMO_ARTISTS[3]),
                 artworkUrl = "https://picsum.photos/seed/album8/500/500",
@@ -445,7 +440,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-9"),
+                id = "album-9",
                 name = "Monsters",
                 artists = listOf(DEMO_ARTISTS[0]),
                 artworkUrl = "https://picsum.photos/seed/album9/500/500",
@@ -454,7 +449,7 @@ class DemoPlugin : ViperPlugin {
                 type = AlbumType.ALBUM
             ),
             Album(
-                id = MediaId(PLUGIN_ID, "album-10"),
+                id = "album-10",
                 name = "New Model",
                 artists = listOf(DEMO_ARTISTS[4]),
                 artworkUrl = "https://picsum.photos/seed/album10/500/500",
@@ -466,50 +461,50 @@ class DemoPlugin : ViperPlugin {
         
         private val DEMO_SONGS = listOf(
             // The Midnight - Nocturnal
-            Song(id = MediaId(PLUGIN_ID, "song-1"), title = "Sunset", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 245000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave")),
-            Song(id = MediaId(PLUGIN_ID, "song-2"), title = "Los Angeles", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 312000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave")),
-            Song(id = MediaId(PLUGIN_ID, "song-3"), title = "Crystalline", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 278000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave")),
-            Song(id = MediaId(PLUGIN_ID, "song-4"), title = "River of Darkness", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 301000, trackNumber = 4, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-1", title = "Sunset", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 245000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-2", title = "Los Angeles", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 312000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-3", title = "Crystalline", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 278000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-4", title = "River of Darkness", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[0], durationMs = 301000, trackNumber = 4, isPlayable = true, genres = listOf("Synthwave")),
             // The Midnight - Kids
-            Song(id = MediaId(PLUGIN_ID, "song-5"), title = "Kids", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[3], durationMs = 267000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave")),
-            Song(id = MediaId(PLUGIN_ID, "song-6"), title = "Lost Boy", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[3], durationMs = 293000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave")),
-            Song(id = MediaId(PLUGIN_ID, "song-7"), title = "America 2", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[3], durationMs = 256000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-5", title = "Kids", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[3], durationMs = 267000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-6", title = "Lost Boy", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[3], durationMs = 293000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-7", title = "America 2", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[3], durationMs = 256000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave")),
             // The Midnight - Monsters
-            Song(id = MediaId(PLUGIN_ID, "song-8"), title = "Deep Blue", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[8], durationMs = 289000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave")),
-            Song(id = MediaId(PLUGIN_ID, "song-9"), title = "Monsters", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[8], durationMs = 312000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-8", title = "Deep Blue", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[8], durationMs = 289000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave")),
+            Song(id = "song-9", title = "Monsters", artists = listOf(DEMO_ARTISTS[0]), album = DEMO_ALBUMS[8], durationMs = 312000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave")),
             // FM-84 - Atlas
-            Song(id = MediaId(PLUGIN_ID, "song-10"), title = "Running in the Night", artists = listOf(DEMO_ARTISTS[1]), album = DEMO_ALBUMS[1], durationMs = 289000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-11"), title = "Every Road", artists = listOf(DEMO_ARTISTS[1]), album = DEMO_ALBUMS[1], durationMs = 276000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-12"), title = "Wild Ones", artists = listOf(DEMO_ARTISTS[1]), album = DEMO_ALBUMS[1], durationMs = 301000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-10", title = "Running in the Night", artists = listOf(DEMO_ARTISTS[1]), album = DEMO_ALBUMS[1], durationMs = 289000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-11", title = "Every Road", artists = listOf(DEMO_ARTISTS[1]), album = DEMO_ALBUMS[1], durationMs = 276000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-12", title = "Wild Ones", artists = listOf(DEMO_ARTISTS[1]), album = DEMO_ALBUMS[1], durationMs = 301000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
             // Gunship - Dark All Day
-            Song(id = MediaId(PLUGIN_ID, "song-13"), title = "Dark All Day", artists = listOf(DEMO_ARTISTS[2]), album = DEMO_ALBUMS[2], durationMs = 298000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth")),
-            Song(id = MediaId(PLUGIN_ID, "song-14"), title = "When You Grow Up", artists = listOf(DEMO_ARTISTS[2]), album = DEMO_ALBUMS[2], durationMs = 324000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth")),
-            Song(id = MediaId(PLUGIN_ID, "song-15"), title = "Art3mis & Parzival", artists = listOf(DEMO_ARTISTS[2]), album = DEMO_ALBUMS[2], durationMs = 267000, trackNumber = 3, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-13", title = "Dark All Day", artists = listOf(DEMO_ARTISTS[2]), album = DEMO_ALBUMS[2], durationMs = 298000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-14", title = "When You Grow Up", artists = listOf(DEMO_ARTISTS[2]), album = DEMO_ALBUMS[2], durationMs = 324000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-15", title = "Art3mis & Parzival", artists = listOf(DEMO_ARTISTS[2]), album = DEMO_ALBUMS[2], durationMs = 267000, trackNumber = 3, isPlayable = true, genres = listOf("Darksynth")),
             // Timecop1983 - Reflections
-            Song(id = MediaId(PLUGIN_ID, "song-16"), title = "On the Run", artists = listOf(DEMO_ARTISTS[3]), album = DEMO_ALBUMS[7], durationMs = 245000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-17"), title = "Reflections", artists = listOf(DEMO_ARTISTS[3]), album = DEMO_ALBUMS[7], durationMs = 278000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-18"), title = "Back to You", artists = listOf(DEMO_ARTISTS[3]), album = DEMO_ALBUMS[7], durationMs = 256000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-16", title = "On the Run", artists = listOf(DEMO_ARTISTS[3]), album = DEMO_ALBUMS[7], durationMs = 245000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-17", title = "Reflections", artists = listOf(DEMO_ARTISTS[3]), album = DEMO_ALBUMS[7], durationMs = 278000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-18", title = "Back to You", artists = listOf(DEMO_ARTISTS[3]), album = DEMO_ALBUMS[7], durationMs = 256000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
             // Carpenter Brut - Leather Teeth
-            Song(id = MediaId(PLUGIN_ID, "song-19"), title = "Leather Teeth", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[4], durationMs = 312000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth")),
-            Song(id = MediaId(PLUGIN_ID, "song-20"), title = "Cheerleader Effect", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[4], durationMs = 289000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth")),
-            Song(id = MediaId(PLUGIN_ID, "song-21"), title = "Beware the Beast", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[4], durationMs = 301000, trackNumber = 3, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-19", title = "Leather Teeth", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[4], durationMs = 312000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-20", title = "Cheerleader Effect", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[4], durationMs = 289000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-21", title = "Beware the Beast", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[4], durationMs = 301000, trackNumber = 3, isPlayable = true, genres = listOf("Darksynth")),
             // Carpenter Brut - New Model
-            Song(id = MediaId(PLUGIN_ID, "song-22"), title = "Fab Tool", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[9], durationMs = 267000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth")),
-            Song(id = MediaId(PLUGIN_ID, "song-23"), title = "The Widow Maker", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[9], durationMs = 293000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-22", title = "Fab Tool", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[9], durationMs = 267000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth")),
+            Song(id = "song-23", title = "The Widow Maker", artists = listOf(DEMO_ARTISTS[4]), album = DEMO_ALBUMS[9], durationMs = 293000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth")),
             // Perturbator - Dangerous Days
-            Song(id = MediaId(PLUGIN_ID, "song-24"), title = "Future Club", artists = listOf(DEMO_ARTISTS[5]), album = DEMO_ALBUMS[5], durationMs = 312000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth", "Electronic")),
-            Song(id = MediaId(PLUGIN_ID, "song-25"), title = "Dangerous Days", artists = listOf(DEMO_ARTISTS[5]), album = DEMO_ALBUMS[5], durationMs = 301000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth", "Electronic")),
-            Song(id = MediaId(PLUGIN_ID, "song-26"), title = "Complete Domination", artists = listOf(DEMO_ARTISTS[5]), album = DEMO_ALBUMS[5], durationMs = 278000, trackNumber = 3, isPlayable = true, genres = listOf("Darksynth", "Electronic")),
+            Song(id = "song-24", title = "Future Club", artists = listOf(DEMO_ARTISTS[5]), album = DEMO_ALBUMS[5], durationMs = 312000, trackNumber = 1, isPlayable = true, genres = listOf("Darksynth", "Electronic")),
+            Song(id = "song-25", title = "Dangerous Days", artists = listOf(DEMO_ARTISTS[5]), album = DEMO_ALBUMS[5], durationMs = 301000, trackNumber = 2, isPlayable = true, genres = listOf("Darksynth", "Electronic")),
+            Song(id = "song-26", title = "Complete Domination", artists = listOf(DEMO_ARTISTS[5]), album = DEMO_ALBUMS[5], durationMs = 278000, trackNumber = 3, isPlayable = true, genres = listOf("Darksynth", "Electronic")),
             // Kavinsky - OutRun
-            Song(id = MediaId(PLUGIN_ID, "song-27"), title = "Nightcall", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 245000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-28"), title = "Roadgame", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 289000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-29"), title = "Testarossa Autodrive", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 267000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
-            Song(id = MediaId(PLUGIN_ID, "song-30"), title = "Odd Look", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 256000, trackNumber = 4, isPlayable = true, genres = listOf("Synthwave", "Retrowave"))
+            Song(id = "song-27", title = "Nightcall", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 245000, trackNumber = 1, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-28", title = "Roadgame", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 289000, trackNumber = 2, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-29", title = "Testarossa Autodrive", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 267000, trackNumber = 3, isPlayable = true, genres = listOf("Synthwave", "Retrowave")),
+            Song(id = "song-30", title = "Odd Look", artists = listOf(DEMO_ARTISTS[6]), album = DEMO_ALBUMS[6], durationMs = 256000, trackNumber = 4, isPlayable = true, genres = listOf("Synthwave", "Retrowave"))
         )
         
         private val DEMO_PLAYLISTS = listOf(
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-1"),
+                id = "playlist-1",
                 name = "Synthwave Essentials",
                 description = "The best synthwave tracks from all artists",
                 artworkUrl = "https://picsum.photos/seed/playlist1/500/500",
@@ -518,7 +513,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-2"),
+                id = "playlist-2",
                 name = "Night Drive",
                 description = "Perfect for late night driving through the city",
                 artworkUrl = "https://picsum.photos/seed/playlist2/500/500",
@@ -527,7 +522,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-3"),
+                id = "playlist-3",
                 name = "Darksynth Collection",
                 description = "The darkest and heaviest synthwave tracks",
                 artworkUrl = "https://picsum.photos/seed/playlist3/500/500",
@@ -536,7 +531,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-4"),
+                id = "playlist-4",
                 name = "Retrowave Classics",
                 description = "Classic retrowave hits from the golden era",
                 artworkUrl = "https://picsum.photos/seed/playlist4/500/500",
@@ -545,7 +540,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-5"),
+                id = "playlist-5",
                 name = "The Midnight Mix",
                 description = "All the best tracks from The Midnight",
                 artworkUrl = "https://picsum.photos/seed/playlist5/500/500",
@@ -554,7 +549,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-6"),
+                id = "playlist-6",
                 name = "Workout Energy",
                 description = "High-energy synthwave for your workout",
                 artworkUrl = "https://picsum.photos/seed/playlist6/500/500",
@@ -563,7 +558,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-7"),
+                id = "playlist-7",
                 name = "Chill Synthwave",
                 description = "Relaxing synthwave for studying or relaxing",
                 artworkUrl = "https://picsum.photos/seed/playlist7/500/500",
@@ -572,7 +567,7 @@ class DemoPlugin : ViperPlugin {
                 isPublic = true
             ),
             Playlist(
-                id = MediaId(PLUGIN_ID, "playlist-8"),
+                id = "playlist-8",
                 name = "2020s New Releases",
                 description = "Fresh synthwave releases from 2020 onwards",
                 artworkUrl = "https://picsum.photos/seed/playlist8/500/500",
