@@ -15,7 +15,7 @@
             
             <!-- Intent filter for plugin discovery -->
             <intent-filter>
-                <action android:name="com.viperplayer.plugin.PLUGIN_SERVICE" />
+                <action android:name="com.viperplayer.plugin.ViperPluginService" />
             </intent-filter>
         </service>
 

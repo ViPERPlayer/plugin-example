@@ -1,8 +1,8 @@
 package com.viperplayer.plugin.example
 
 import android.content.Context
-import com.viperplayer.plugin.sdk.ViperPlugin
-import com.viperplayer.plugin.sdk.ViperPluginService
+import com.viperplayer.plugin.ViperPlugin
+import com.viperplayer.plugin.ViperPluginService
 
 /**
  * Service that exposes the DemoPlugin to the host app.
