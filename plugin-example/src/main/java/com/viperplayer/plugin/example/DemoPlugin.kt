@@ -11,10 +11,10 @@ import com.viperplayer.plugin.v1.AudioFormat
 import com.viperplayer.plugin.v1.BrowseCategory
 import com.viperplayer.plugin.v1.CategoryContentType
 import com.viperplayer.plugin.v1.IHostCallbackV1
-import com.viperplayer.plugin.v1.MediaId
 import com.viperplayer.plugin.v1.Playlist
 import com.viperplayer.plugin.v1.PluginCapabilities
 import com.viperplayer.plugin.v1.SearchResult
+import com.viperplayer.plugin.v1.SearchSuggestionsItemV1
 import com.viperplayer.plugin.v1.SearchSuggestionsResultV1
 import com.viperplayer.plugin.v1.Song
 import kotlinx.coroutines.CoroutineScope
@@ -63,7 +63,35 @@ class DemoPlugin : ViperPlugin {
     // ==================== Search ====================
 
     override suspend fun getSearchSuggestions(query: String): SearchSuggestionsResultV1 {
-        TODO("Not yet implemented")
+        delay(100)
+        val lowercaseQuery = query.lowercase()
+
+        // Return matching items as suggestions
+        val songs = DEMO_SONGS.filter {
+            it.title.lowercase().contains(lowercaseQuery) ||
+            it.artistName.lowercase().contains(lowercaseQuery)
+        }.take(5).map {
+            SearchSuggestionsItemV1(
+                type = SearchSuggestionsItemV1.Type.SONG,
+                song = it
+            )
+        }
+
+        val artists = DEMO_ARTISTS.filter {
+            it.name.lowercase().contains(lowercaseQuery)
+        }.take(5).map {
+            SearchSuggestionsItemV1(
+                type = SearchSuggestionsItemV1.Type.ARTIST,
+                artist = it
+            )
+        }
+
+        val items = (songs + artists).take(10)
+
+        return SearchSuggestionsResultV1(
+            suggestions = emptyList(),
+            items = items
+        )
     }
     
     override suspend fun search(
@@ -77,37 +105,71 @@ class DemoPlugin : ViperPlugin {
         
         val lowercaseQuery = query.lowercase()
         
-        val songs = if (types and SearchResult.TYPE_SONG != 0) {
-            DEMO_SONGS.filter { 
-                it.title.lowercase().contains(lowercaseQuery) ||
-                it.artistName.lowercase().contains(lowercaseQuery)
-            }.take(limit)
-        } else emptyList()
-        
-        val albums = if (types and SearchResult.TYPE_ALBUM != 0) {
-            DEMO_ALBUMS.filter {
-                it.name.lowercase().contains(lowercaseQuery) ||
-                it.artistName.lowercase().contains(lowercaseQuery)
-            }.take(limit)
-        } else emptyList()
-        
-        val artists = if (types and SearchResult.TYPE_ARTIST != 0) {
-            DEMO_ARTISTS.filter {
-                it.name.lowercase().contains(lowercaseQuery)
-            }.take(limit)
-        } else emptyList()
-        
-        val playlists = if (types and SearchResult.TYPE_PLAYLIST != 0) {
-            DEMO_PLAYLISTS.filter {
-                it.name.lowercase().contains(lowercaseQuery)
-            }.take(limit)
-        } else emptyList()
-        
+        val items = mutableListOf<SearchSuggestionsItemV1>()
+
+        if (types and SearchResult.TYPE_SONG != 0) {
+            items.addAll(
+                DEMO_SONGS.filter {
+                    it.title.lowercase().contains(lowercaseQuery) ||
+                    it.artistName.lowercase().contains(lowercaseQuery)
+                }.take(limit).map {
+                    SearchSuggestionsItemV1(
+                        type = SearchSuggestionsItemV1.Type.SONG,
+                        song = it
+                    )
+                }
+            )
+        }
+
+        if (types and SearchResult.TYPE_ALBUM != 0) {
+            items.addAll(
+                DEMO_ALBUMS.filter {
+                    it.name.lowercase().contains(lowercaseQuery) ||
+                    it.artistName.lowercase().contains(lowercaseQuery)
+                }.take(limit).map {
+                    SearchSuggestionsItemV1(
+                        type = SearchSuggestionsItemV1.Type.ALBUM,
+                        album = it
+                    )
+                }
+            )
+        }
+
+        if (types and SearchResult.TYPE_ARTIST != 0) {
+            items.addAll(
+                DEMO_ARTISTS.filter {
+                    it.name.lowercase().contains(lowercaseQuery)
+                }.take(limit).map {
+                    SearchSuggestionsItemV1(
+                        type = SearchSuggestionsItemV1.Type.ARTIST,
+                        artist = it
+                    )
+                }
+            )
+        }
+
+        if (types and SearchResult.TYPE_PLAYLIST != 0) {
+            items.addAll(
+                DEMO_PLAYLISTS.filter {
+                    it.name.lowercase().contains(lowercaseQuery)
+                }.take(limit).map {
+                    SearchSuggestionsItemV1(
+                        type = SearchSuggestionsItemV1.Type.PLAYLIST,
+                        playlist = it
+                    )
+                }
+            )
+        }
+
         return SearchResult(
-            songs = songs,
-            albums = albums,
-            artists = artists,
-            playlists = playlists,
+            sections = if (items.isNotEmpty()) {
+                listOf(SearchResult.Section(
+                    type = SearchResult.Section.Type.OTHER,
+                    items = items.take(limit)
+                ))
+            } else {
+                emptyList()
+            },
             nextCursor = null // No pagination in demo
         )
     }
@@ -129,16 +191,41 @@ class DemoPlugin : ViperPlugin {
     ): SearchResult {
         delay(150)
         
-        return when (categoryId) {
-            "new-releases" -> SearchResult(albums = DEMO_ALBUMS.filter { it.releaseYear != null && it.releaseYear!! >= 2020 }.take(limit))
-            "top-songs" -> SearchResult(songs = DEMO_SONGS.sortedByDescending { it.durationMs }.take(limit))
-            "featured-playlists" -> SearchResult(playlists = DEMO_PLAYLISTS.filter { it.isPublic }.take(limit))
-            "genres-synthwave" -> SearchResult(songs = DEMO_SONGS.filter { it.artists.any { artist -> artist.genres.contains("Synthwave") } }.take(limit))
-            "genres-electronic" -> SearchResult(albums = DEMO_ALBUMS.filter { it.artists.any { artist -> artist.genres.contains("Electronic") } }.take(limit))
-            "artists" -> SearchResult(artists = DEMO_ARTISTS.take(limit))
-            "recently-played" -> SearchResult(songs = DEMO_SONGS.shuffled().take(limit))
-            else -> SearchResult()
+        val items = when (categoryId) {
+            "new-releases" -> DEMO_ALBUMS.filter { it.releaseYear != null && it.releaseYear!! >= 2020 }.take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.ALBUM, album = it)
+            }
+            "top-songs" -> DEMO_SONGS.sortedByDescending { it.durationMs }.take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.SONG, song = it)
+            }
+            "featured-playlists" -> DEMO_PLAYLISTS.filter { it.isPublic }.take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.PLAYLIST, playlist = it)
+            }
+            "genres-synthwave" -> DEMO_SONGS.filter { it.artists.any { artist -> artist.genres.contains("Synthwave") } }.take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.SONG, song = it)
+            }
+            "genres-electronic" -> DEMO_ALBUMS.filter { it.artists.any { artist -> artist.genres.contains("Electronic") } }.take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.ALBUM, album = it)
+            }
+            "artists" -> DEMO_ARTISTS.take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.ARTIST, artist = it)
+            }
+            "recently-played" -> DEMO_SONGS.shuffled().take(limit).map {
+                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.SONG, song = it)
+            }
+            else -> emptyList()
         }
+
+        return SearchResult(
+            sections = if (items.isNotEmpty()) {
+                listOf(SearchResult.Section(
+                    type = SearchResult.Section.Type.OTHER,
+                    items = items
+                ))
+            } else {
+                emptyList()
+            }
+        )
     }
     
     // ==================== Library ====================
@@ -177,15 +264,15 @@ class DemoPlugin : ViperPlugin {
     
     // ==================== Details ====================
     
-    override suspend fun getSong(mediaId: MediaId): Song {
+    override suspend fun getSong(mediaId: String): Song {
         delay(50)
-        return DEMO_SONGS.find { it.id == mediaId.sourceId }
+        return DEMO_SONGS.find { it.id == mediaId }
             ?: throw NotFoundException("Song not found: $mediaId")
     }
     
-    override suspend fun getAlbum(mediaId: MediaId): Album {
+    override suspend fun getAlbum(mediaId: String): Album {
         delay(50)
-        val album = DEMO_ALBUMS.find { it.id == mediaId.sourceId }
+        val album = DEMO_ALBUMS.find { it.id == mediaId }
             ?: throw NotFoundException("Album not found: $mediaId")
         
         // Return album with tracks populated
@@ -193,39 +280,39 @@ class DemoPlugin : ViperPlugin {
         return album.copy(songs = tracks)
     }
     
-    override suspend fun getArtist(mediaId: MediaId): Artist {
+    override suspend fun getArtist(mediaId: String): Artist {
         delay(50)
-        return DEMO_ARTISTS.find { it.id == mediaId.sourceId }
+        return DEMO_ARTISTS.find { it.id == mediaId }
             ?: throw NotFoundException("Artist not found: $mediaId")
     }
     
     override suspend fun getArtistSongs(
-        artistId: MediaId,
+        artistId: String,
         cursor: String?,
         limit: Int
     ): PagedResult<Song> {
         delay(100)
         val songs = DEMO_SONGS.filter { song ->
-            song.artists.any { it.id == artistId.sourceId }
+            song.artists.any { it.id == artistId }
         }.take(limit)
         return PagedResult(songs)
     }
     
     override suspend fun getArtistAlbums(
-        artistId: MediaId,
+        artistId: String,
         cursor: String?,
         limit: Int
     ): PagedResult<Album> {
         delay(100)
         val albums = DEMO_ALBUMS.filter { album ->
-            album.artists.any { it.id == artistId.sourceId }
+            album.artists.any { it.id == artistId }
         }.take(limit)
         return PagedResult(albums)
     }
     
-    override suspend fun getPlaylist(mediaId: MediaId): Playlist {
+    override suspend fun getPlaylist(mediaId: String): Playlist {
         delay(50)
-        val playlist = DEMO_PLAYLISTS.find { it.id == mediaId.sourceId }
+        val playlist = DEMO_PLAYLISTS.find { it.id == mediaId }
             ?: throw NotFoundException("Playlist not found: $mediaId")
         
         // Get songs for this specific playlist
@@ -234,16 +321,16 @@ class DemoPlugin : ViperPlugin {
     }
     
     override suspend fun getPlaylistSongs(
-        playlistId: MediaId,
+        playlistId: String,
         cursor: String?,
         limit: Int
     ): PagedResult<Song> {
         delay(100)
-        val playlist = DEMO_PLAYLISTS.find { it.id == playlistId.sourceId }
+        val playlist = DEMO_PLAYLISTS.find { it.id == playlistId }
             ?: throw NotFoundException("Playlist not found: $playlistId")
         
         // Get songs for this specific playlist
-        val playlistSongs = PLAYLIST_SONGS[playlistId.sourceId].orEmpty()
+        val playlistSongs = PLAYLIST_SONGS[playlistId].orEmpty()
         val paginatedSongs = playlistSongs.drop(cursor?.toIntOrNull() ?: 0).take(limit)
         val nextCursor = if (paginatedSongs.size < playlistSongs.size - (cursor?.toIntOrNull() ?: 0)) {
             ((cursor?.toIntOrNull() ?: 0) + limit).toString()
@@ -254,7 +341,7 @@ class DemoPlugin : ViperPlugin {
     
     // ==================== Audio Streaming ====================
     
-    override suspend fun getAudioStream(mediaId: MediaId): AudioStreamWriter {
+    override suspend fun getAudioStream(mediaId: String): AudioStreamWriter {
         val song = getSong(mediaId)
         
         val writer = AudioStreamWriter.create(
@@ -268,7 +355,7 @@ class DemoPlugin : ViperPlugin {
         val job = scope.launch {
             try {
                 streamSilence(writer, song.durationMs ?: 0L)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Stream ended or was cancelled
             } finally {
                 writer.close()
