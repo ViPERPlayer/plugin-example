@@ -14,7 +14,6 @@ import com.viperplayer.plugin.v1.IHostCallbackV1
 import com.viperplayer.plugin.v1.Playlist
 import com.viperplayer.plugin.v1.PluginCapabilities
 import com.viperplayer.plugin.v1.SearchResult
-import com.viperplayer.plugin.v1.SearchSuggestionsItemV1
 import com.viperplayer.plugin.v1.SearchSuggestionsResultV1
 import com.viperplayer.plugin.v1.Song
 import kotlinx.coroutines.CoroutineScope
