@@ -263,26 +263,26 @@ class DemoPlugin : ViperPlugin {
     
     // ==================== Details ====================
     
-    override suspend fun getSong(mediaId: String): Song {
+    override suspend fun getSong(id: String): Song {
         delay(50)
-        return DEMO_SONGS.find { it.id == mediaId }
-            ?: throw NotFoundException("Song not found: $mediaId")
+        return DEMO_SONGS.find { it.id == id }
+            ?: throw NotFoundException("Song not found: $id")
     }
     
-    override suspend fun getAlbum(mediaId: String): Album {
+    override suspend fun getAlbum(id: String): Album {
         delay(50)
-        val album = DEMO_ALBUMS.find { it.id == mediaId }
-            ?: throw NotFoundException("Album not found: $mediaId")
+        val album = DEMO_ALBUMS.find { it.id == id }
+            ?: throw NotFoundException("Album not found: $id")
         
         // Return album with tracks populated
         val tracks = DEMO_SONGS.filter { it.album?.id == album.id }
         return album.copy(songs = tracks)
     }
     
-    override suspend fun getArtist(mediaId: String): Artist {
+    override suspend fun getArtist(id: String): Artist {
         delay(50)
-        return DEMO_ARTISTS.find { it.id == mediaId }
-            ?: throw NotFoundException("Artist not found: $mediaId")
+        return DEMO_ARTISTS.find { it.id == id }
+            ?: throw NotFoundException("Artist not found: $id")
     }
     
     override suspend fun getArtistSongs(
