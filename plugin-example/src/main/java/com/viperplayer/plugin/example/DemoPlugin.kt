@@ -7,15 +7,19 @@ import com.viperplayer.plugin.ViperPlugin
 import com.viperplayer.plugin.v1.Album
 import com.viperplayer.plugin.v1.AlbumType
 import com.viperplayer.plugin.v1.Artist
+import com.viperplayer.plugin.v1.Artwork
 import com.viperplayer.plugin.v1.AudioFormat
 import com.viperplayer.plugin.v1.BrowseCategory
 import com.viperplayer.plugin.v1.CategoryContentType
 import com.viperplayer.plugin.v1.IHostCallbackV1
+import com.viperplayer.plugin.v1.MediaItemV1
 import com.viperplayer.plugin.v1.Playlist
 import com.viperplayer.plugin.v1.PluginCapabilities
+import com.viperplayer.plugin.v1.SearchFilter
 import com.viperplayer.plugin.v1.SearchResult
 import com.viperplayer.plugin.v1.SearchSuggestionsResultV1
 import com.viperplayer.plugin.v1.Song
+import com.viperplayer.plugin.v1.StreamSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -70,19 +74,13 @@ class DemoPlugin : ViperPlugin {
             it.title.lowercase().contains(lowercaseQuery) ||
             it.artistName.lowercase().contains(lowercaseQuery)
         }.take(5).map {
-            SearchSuggestionsItemV1(
-                type = SearchSuggestionsItemV1.Type.SONG,
-                song = it
-            )
+            MediaItemV1.song(it)
         }
 
         val artists = DEMO_ARTISTS.filter {
             it.name.lowercase().contains(lowercaseQuery)
         }.take(5).map {
-            SearchSuggestionsItemV1(
-                type = SearchSuggestionsItemV1.Type.ARTIST,
-                artist = it
-            )
+            MediaItemV1.artist(it)
         }
 
         val items = (songs + artists).take(10)
@@ -95,7 +93,7 @@ class DemoPlugin : ViperPlugin {
     
     override suspend fun search(
         query: String,
-        types: Int,
+        filter: SearchFilter?,
         cursor: String?,
         limit: Int
     ): SearchResult {
@@ -104,71 +102,52 @@ class DemoPlugin : ViperPlugin {
         
         val lowercaseQuery = query.lowercase()
         
-        val items = mutableListOf<SearchSuggestionsItemV1>()
+        val items = mutableListOf<MediaItemV1>()
 
-        if (types and SearchResult.TYPE_SONG != 0) {
+        if (filter == null || filter == SearchFilter.SONG) {
             items.addAll(
                 DEMO_SONGS.filter {
                     it.title.lowercase().contains(lowercaseQuery) ||
                     it.artistName.lowercase().contains(lowercaseQuery)
                 }.take(limit).map {
-                    SearchSuggestionsItemV1(
-                        type = SearchSuggestionsItemV1.Type.SONG,
-                        song = it
-                    )
+                    MediaItemV1.song(it)
                 }
             )
         }
 
-        if (types and SearchResult.TYPE_ALBUM != 0) {
+        if (filter == null || filter == SearchFilter.ALBUM) {
             items.addAll(
                 DEMO_ALBUMS.filter {
                     it.name.lowercase().contains(lowercaseQuery) ||
                     it.artistName.lowercase().contains(lowercaseQuery)
                 }.take(limit).map {
-                    SearchSuggestionsItemV1(
-                        type = SearchSuggestionsItemV1.Type.ALBUM,
-                        album = it
-                    )
+                    MediaItemV1.album(it)
                 }
             )
         }
 
-        if (types and SearchResult.TYPE_ARTIST != 0) {
+        if (filter == null || filter == SearchFilter.ARTIST) {
             items.addAll(
                 DEMO_ARTISTS.filter {
                     it.name.lowercase().contains(lowercaseQuery)
                 }.take(limit).map {
-                    SearchSuggestionsItemV1(
-                        type = SearchSuggestionsItemV1.Type.ARTIST,
-                        artist = it
-                    )
+                    MediaItemV1.artist(it)
                 }
             )
         }
 
-        if (types and SearchResult.TYPE_PLAYLIST != 0) {
+        if (filter == null || filter == SearchFilter.PLAYLIST) {
             items.addAll(
                 DEMO_PLAYLISTS.filter {
                     it.name.lowercase().contains(lowercaseQuery)
                 }.take(limit).map {
-                    SearchSuggestionsItemV1(
-                        type = SearchSuggestionsItemV1.Type.PLAYLIST,
-                        playlist = it
-                    )
+                    MediaItemV1.playlist(it)
                 }
             )
         }
 
         return SearchResult(
-            sections = if (items.isNotEmpty()) {
-                listOf(SearchResult.Section(
-                    type = SearchResult.Section.Type.OTHER,
-                    items = items.take(limit)
-                ))
-            } else {
-                emptyList()
-            },
+            items = items.take(limit),
             nextCursor = null // No pagination in demo
         )
     }
@@ -192,38 +171,31 @@ class DemoPlugin : ViperPlugin {
         
         val items = when (categoryId) {
             "new-releases" -> DEMO_ALBUMS.filter { it.releaseYear != null && it.releaseYear!! >= 2020 }.take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.ALBUM, album = it)
+                MediaItemV1.album(it)
             }
             "top-songs" -> DEMO_SONGS.sortedByDescending { it.durationMs }.take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.SONG, song = it)
+                MediaItemV1.song(it)
             }
-            "featured-playlists" -> DEMO_PLAYLISTS.filter { it.isPublic }.take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.PLAYLIST, playlist = it)
+            "featured-playlists" -> DEMO_PLAYLISTS.take(limit).map {
+                MediaItemV1.playlist(it)
             }
-            "genres-synthwave" -> DEMO_SONGS.filter { it.artists.any { artist -> artist.genres.contains("Synthwave") } }.take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.SONG, song = it)
+            "genres-synthwave" -> DEMO_SONGS.filter { it.genres.contains("Synthwave") }.take(limit).map {
+                MediaItemV1.song(it)
             }
-            "genres-electronic" -> DEMO_ALBUMS.filter { it.artists.any { artist -> artist.genres.contains("Electronic") } }.take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.ALBUM, album = it)
+            "genres-electronic" -> DEMO_ALBUMS.take(limit).map {
+                MediaItemV1.album(it)
             }
             "artists" -> DEMO_ARTISTS.take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.ARTIST, artist = it)
+                MediaItemV1.artist(it)
             }
             "recently-played" -> DEMO_SONGS.shuffled().take(limit).map {
-                SearchSuggestionsItemV1(type = SearchSuggestionsItemV1.Type.SONG, song = it)
+                MediaItemV1.song(it)
             }
             else -> emptyList()
         }
 
         return SearchResult(
-            sections = if (items.isNotEmpty()) {
-                listOf(SearchResult.Section(
-                    type = SearchResult.Section.Type.OTHER,
-                    items = items
-                ))
-            } else {
-                emptyList()
-            }
+            items = items
         )
     }
     
@@ -340,7 +312,7 @@ class DemoPlugin : ViperPlugin {
     
     // ==================== Audio Streaming ====================
     
-    override suspend fun getAudioStream(mediaId: String): AudioStreamWriter {
+    override suspend fun getStream(mediaId: String): StreamSource {
         val song = getSong(mediaId)
         
         val writer = AudioStreamWriter.create(
@@ -363,7 +335,7 @@ class DemoPlugin : ViperPlugin {
         
         activeStreams[writer.streamId] = job
         
-        return writer
+        return StreamSource.audioStream(writer.audioStream)
     }
     
     override suspend fun stopAudioStream(streamId: String) {
@@ -404,51 +376,37 @@ class DemoPlugin : ViperPlugin {
             Artist(
                 id = "artist-1",
                 name = "The Midnight",
-                imageUrl = "https://picsum.photos/seed/artist1/300/300",
-                genres = listOf("Synthwave", "Electronic", "Retrowave"),
-                followerCount = 500000
+                artwork = Artwork("https://picsum.photos/seed/artist1/300/300", "https://picsum.photos/seed/artist1/300/300"),
             ),
             Artist(
                 id = "artist-2",
                 name = "FM-84",
-                imageUrl = "https://picsum.photos/seed/artist2/300/300",
-                genres = listOf("Synthwave", "Retrowave", "Pop"),
-                followerCount = 250000
+                artwork = Artwork("https://picsum.photos/seed/artist2/300/300", "https://picsum.photos/seed/artist2/300/300"),
             ),
             Artist(
                 id = "artist-3",
                 name = "Gunship",
-                imageUrl = "https://picsum.photos/seed/artist3/300/300",
-                genres = listOf("Synthwave", "Darksynth", "Electronic"),
-                followerCount = 350000
+                artwork = Artwork("https://picsum.photos/seed/artist3/300/300", "https://picsum.photos/seed/artist3/300/300"),
             ),
             Artist(
                 id = "artist-4",
                 name = "Timecop1983",
-                imageUrl = "https://picsum.photos/seed/artist4/300/300",
-                genres = listOf("Synthwave", "Retrowave", "Ambient"),
-                followerCount = 180000
+                artwork = Artwork("https://picsum.photos/seed/artist4/300/300", "https://picsum.photos/seed/artist4/300/300"),
             ),
             Artist(
                 id = "artist-5",
                 name = "Carpenter Brut",
-                imageUrl = "https://picsum.photos/seed/artist5/300/300",
-                genres = listOf("Darksynth", "Synthwave", "Electronic"),
-                followerCount = 420000
+                artwork = Artwork("https://picsum.photos/seed/artist5/300/300", "https://picsum.photos/seed/artist5/300/300"),
             ),
             Artist(
                 id = "artist-6",
                 name = "Perturbator",
-                imageUrl = "https://picsum.photos/seed/artist6/300/300",
-                genres = listOf("Darksynth", "Electronic", "Industrial"),
-                followerCount = 380000
+                artwork = Artwork("https://picsum.photos/seed/artist6/300/300", "https://picsum.photos/seed/artist6/300/300"),
             ),
             Artist(
                 id = "artist-7",
                 name = "Kavinsky",
-                imageUrl = "https://picsum.photos/seed/artist7/300/300",
-                genres = listOf("Synthwave", "Electronic", "Retrowave"),
-                followerCount = 600000
+                artwork = Artwork("https://picsum.photos/seed/artist7/300/300", "https://picsum.photos/seed/artist7/300/300"),
             )
         )
         
@@ -457,7 +415,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-1",
                 name = "Nocturnal",
                 artists = listOf(DEMO_ARTISTS[0]),
-                artworkUrl = "https://picsum.photos/seed/album1/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album1/500/500", "https://picsum.photos/seed/album1/500/500"),
                 releaseYear = 2017,
                 trackCount = 12,
                 type = AlbumType.ALBUM
@@ -466,7 +424,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-2",
                 name = "Atlas",
                 artists = listOf(DEMO_ARTISTS[1]),
-                artworkUrl = "https://picsum.photos/seed/album2/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album2/500/500", "https://picsum.photos/seed/album2/500/500"),
                 releaseYear = 2016,
                 trackCount = 10,
                 type = AlbumType.ALBUM
@@ -475,7 +433,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-3",
                 name = "Dark All Day",
                 artists = listOf(DEMO_ARTISTS[2]),
-                artworkUrl = "https://picsum.photos/seed/album3/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album3/500/500", "https://picsum.photos/seed/album3/500/500"),
                 releaseYear = 2018,
                 trackCount = 14,
                 type = AlbumType.ALBUM
@@ -484,7 +442,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-4",
                 name = "Kids",
                 artists = listOf(DEMO_ARTISTS[0]),
-                artworkUrl = "https://picsum.photos/seed/album4/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album4/500/500", "https://picsum.photos/seed/album4/500/500"),
                 releaseYear = 2018,
                 trackCount = 11,
                 type = AlbumType.ALBUM
@@ -493,7 +451,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-5",
                 name = "Leather Teeth",
                 artists = listOf(DEMO_ARTISTS[4]),
-                artworkUrl = "https://picsum.photos/seed/album5/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album5/500/500", "https://picsum.photos/seed/album5/500/500"),
                 releaseYear = 2018,
                 trackCount = 9,
                 type = AlbumType.ALBUM
@@ -502,7 +460,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-6",
                 name = "Dangerous Days",
                 artists = listOf(DEMO_ARTISTS[5]),
-                artworkUrl = "https://picsum.photos/seed/album6/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album6/500/500", "https://picsum.photos/seed/album6/500/500"),
                 releaseYear = 2014,
                 trackCount = 13,
                 type = AlbumType.ALBUM
@@ -511,7 +469,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-7",
                 name = "OutRun",
                 artists = listOf(DEMO_ARTISTS[6]),
-                artworkUrl = "https://picsum.photos/seed/album7/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album7/500/500", "https://picsum.photos/seed/album7/500/500"),
                 releaseYear = 2013,
                 trackCount = 10,
                 type = AlbumType.ALBUM
@@ -520,7 +478,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-8",
                 name = "Reflections",
                 artists = listOf(DEMO_ARTISTS[3]),
-                artworkUrl = "https://picsum.photos/seed/album8/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album8/500/500", "https://picsum.photos/seed/album8/500/500"),
                 releaseYear = 2020,
                 trackCount = 12,
                 type = AlbumType.ALBUM
@@ -529,7 +487,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-9",
                 name = "Monsters",
                 artists = listOf(DEMO_ARTISTS[0]),
-                artworkUrl = "https://picsum.photos/seed/album9/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album9/500/500", "https://picsum.photos/seed/album9/500/500"),
                 releaseYear = 2020,
                 trackCount = 15,
                 type = AlbumType.ALBUM
@@ -538,7 +496,7 @@ class DemoPlugin : ViperPlugin {
                 id = "album-10",
                 name = "New Model",
                 artists = listOf(DEMO_ARTISTS[4]),
-                artworkUrl = "https://picsum.photos/seed/album10/500/500",
+                artwork = Artwork("https://picsum.photos/seed/album10/500/500", "https://picsum.photos/seed/album10/500/500"),
                 releaseYear = 2021,
                 trackCount = 11,
                 type = AlbumType.ALBUM
@@ -593,73 +551,65 @@ class DemoPlugin : ViperPlugin {
                 id = "playlist-1",
                 name = "Synthwave Essentials",
                 description = "The best synthwave tracks from all artists",
-                artworkUrl = "https://picsum.photos/seed/playlist1/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist1/500/500", "https://picsum.photos/seed/playlist1/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 12,
-                isPublic = true
+                songCount = 12
             ),
             Playlist(
                 id = "playlist-2",
                 name = "Night Drive",
                 description = "Perfect for late night driving through the city",
-                artworkUrl = "https://picsum.photos/seed/playlist2/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist2/500/500", "https://picsum.photos/seed/playlist2/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 10,
-                isPublic = true
+                songCount = 10
             ),
             Playlist(
                 id = "playlist-3",
                 name = "Darksynth Collection",
                 description = "The darkest and heaviest synthwave tracks",
-                artworkUrl = "https://picsum.photos/seed/playlist3/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist3/500/500", "https://picsum.photos/seed/playlist3/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 8,
-                isPublic = true
+                songCount = 8
             ),
             Playlist(
                 id = "playlist-4",
                 name = "Retrowave Classics",
                 description = "Classic retrowave hits from the golden era",
-                artworkUrl = "https://picsum.photos/seed/playlist4/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist4/500/500", "https://picsum.photos/seed/playlist4/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 9,
-                isPublic = true
+                songCount = 9
             ),
             Playlist(
                 id = "playlist-5",
                 name = "The Midnight Mix",
                 description = "All the best tracks from The Midnight",
-                artworkUrl = "https://picsum.photos/seed/playlist5/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist5/500/500", "https://picsum.photos/seed/playlist5/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 6,
-                isPublic = true
+                songCount = 6
             ),
             Playlist(
                 id = "playlist-6",
                 name = "Workout Energy",
                 description = "High-energy synthwave for your workout",
-                artworkUrl = "https://picsum.photos/seed/playlist6/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist6/500/500", "https://picsum.photos/seed/playlist6/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 7,
-                isPublic = true
+                songCount = 7
             ),
             Playlist(
                 id = "playlist-7",
                 name = "Chill Synthwave",
                 description = "Relaxing synthwave for studying or relaxing",
-                artworkUrl = "https://picsum.photos/seed/playlist7/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist7/500/500", "https://picsum.photos/seed/playlist7/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 8,
-                isPublic = true
+                songCount = 8
             ),
             Playlist(
                 id = "playlist-8",
                 name = "2020s New Releases",
                 description = "Fresh synthwave releases from 2020 onwards",
-                artworkUrl = "https://picsum.photos/seed/playlist8/500/500",
+                artwork = Artwork("https://picsum.photos/seed/playlist8/500/500", "https://picsum.photos/seed/playlist8/500/500"),
                 ownerName = "ViPER Player",
-                songCount = 5,
-                isPublic = true
+                songCount = 5
             )
         )
         
