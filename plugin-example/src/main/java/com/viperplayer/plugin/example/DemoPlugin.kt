@@ -257,30 +257,6 @@ class DemoPlugin : ViperPlugin {
             ?: throw NotFoundException("Artist not found: $id")
     }
     
-    override suspend fun getArtistSongs(
-        artistId: String,
-        cursor: String?,
-        limit: Int
-    ): PagedResult<Song> {
-        delay(100)
-        val songs = DEMO_SONGS.filter { song ->
-            song.artists.any { it.id == artistId }
-        }.take(limit)
-        return PagedResult(songs)
-    }
-    
-    override suspend fun getArtistAlbums(
-        artistId: String,
-        cursor: String?,
-        limit: Int
-    ): PagedResult<Album> {
-        delay(100)
-        val albums = DEMO_ALBUMS.filter { album ->
-            album.artists.any { it.id == artistId }
-        }.take(limit)
-        return PagedResult(albums)
-    }
-    
     override suspend fun getPlaylist(mediaId: String): Playlist {
         delay(50)
         val playlist = DEMO_PLAYLISTS.find { it.id == mediaId }
@@ -290,26 +266,36 @@ class DemoPlugin : ViperPlugin {
         val playlistSongs = PLAYLIST_SONGS[playlist.id].orEmpty()
         return playlist.copy(songs = playlistSongs)
     }
-    
-    override suspend fun getPlaylistSongs(
-        playlistId: String,
-        cursor: String?,
-        limit: Int
-    ): PagedResult<Song> {
+
+    // ==================== Home Screen ====================
+
+    override suspend fun getHomeSections(): com.viperplayer.plugin.v1.HomeContent {
         delay(100)
-        val playlist = DEMO_PLAYLISTS.find { it.id == playlistId }
-            ?: throw NotFoundException("Playlist not found: $playlistId")
         
-        // Get songs for this specific playlist
-        val playlistSongs = PLAYLIST_SONGS[playlistId].orEmpty()
-        val paginatedSongs = playlistSongs.drop(cursor?.toIntOrNull() ?: 0).take(limit)
-        val nextCursor = if (paginatedSongs.size < playlistSongs.size - (cursor?.toIntOrNull() ?: 0)) {
-            ((cursor?.toIntOrNull() ?: 0) + limit).toString()
-        } else null
+        val quickPicks = DEMO_SONGS.shuffled().take(5).map { MediaItemV1.song(it) }
         
-        return PagedResult(paginatedSongs, nextCursor)
+        val sections = listOf(
+            // Custom "Made For You" section
+            com.viperplayer.plugin.v1.HomeSection(
+                id = "made_for_you",
+                title = "Made For You",
+                items = DEMO_PLAYLISTS.take(3).map { MediaItemV1.playlist(it) }
+            ),
+            
+            // Custom "New Releases" section
+            com.viperplayer.plugin.v1.HomeSection(
+                id = "new_releases",
+                title = "New Releases",
+                items = DEMO_ALBUMS.filter { it.releaseYear != null && it.releaseYear!! >= 2020 }.take(5).map { MediaItemV1.album(it) }
+            )
+        )
+        
+        return com.viperplayer.plugin.v1.HomeContent(
+            quickPicks = quickPicks,
+            sections = sections
+        )
     }
-    
+
     // ==================== Audio Streaming ====================
     
     override suspend fun getStream(mediaId: String): StreamSource {
