@@ -185,7 +185,7 @@ class DemoSource : SourceProvider {
 
     // ==================== Streaming ====================
 
-    override suspend fun resolveStream(songId: String): StreamResponse {
+    override suspend fun resolveStream(songId: String, type: MediaType): StreamResponse {
         val song = getSong(songId)
         val writer = AudioStreamWriter.create(
             format = AudioFormat(sampleRate = 44100, channelCount = 2, encoding = PcmEncoding.PCM_16BIT),
