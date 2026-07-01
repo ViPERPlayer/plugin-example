@@ -5,9 +5,9 @@ import com.viperplayer.plugin.model.Artist
 import com.viperplayer.plugin.model.Artwork
 import com.viperplayer.plugin.model.AudioFormat
 import com.viperplayer.plugin.model.BrowseCategory
+import com.viperplayer.plugin.model.CarouselSection
 import com.viperplayer.plugin.model.CategoryContentType
 import com.viperplayer.plugin.model.HomeContent
-import com.viperplayer.plugin.model.HomeSection
 import com.viperplayer.plugin.model.MediaItem
 import com.viperplayer.plugin.model.MediaType
 import com.viperplayer.plugin.model.Page
@@ -169,12 +169,12 @@ class DemoSource : SourceProvider {
         return HomeContent(
             quickPicks = DEMO_SONGS.shuffled().take(5),
             sections = listOf(
-                HomeSection(
+                CarouselSection(
                     id = "made_for_you",
                     title = "Made For You",
                     items = DEMO_PLAYLISTS.take(3),
                 ),
-                HomeSection(
+                CarouselSection(
                     id = "new_releases",
                     title = "New Releases",
                     items = DEMO_ALBUMS.filter { (it.releaseYear ?: 0) >= 2020 }.take(5),
@@ -185,7 +185,7 @@ class DemoSource : SourceProvider {
 
     // ==================== Streaming ====================
 
-    override suspend fun resolveStream(songId: String, type: MediaType): StreamResponse {
+    override suspend fun resolveStream(songId: String, type: MediaType, maxBitrateKbps: Int?): StreamResponse {
         val song = getSong(songId)
         val writer = AudioStreamWriter.create(
             format = AudioFormat(sampleRate = 44100, channelCount = 2, encoding = PcmEncoding.PCM_16BIT),
