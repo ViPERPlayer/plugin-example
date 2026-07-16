@@ -26,6 +26,21 @@
         <meta-data
             android:name="com.viperplayer.plugin.DESCRIPTION"
             android:value="A demo plugin with sample music for testing" />
+
+        <!--
+            OPTIONAL: opt this plugin into in-app updates. Point this at an HTTPS JSON update feed;
+            the host fetches it, compares versionCode with the installed build, and offers the update
+            in the Plugins screen (install goes through the user-confirmed PackageInstaller). The feed
+            JSON looks like:
+              { "versionCode": 2, "versionName": "1.1",
+                "downloadUrl": "https://example.com/plugins/demo/demo-1.1.apk",
+                "changelog": "Bug fixes", "minHostVersion": 1, "sha256": "<hex>" }
+            Omit this meta-data to opt out — the plugin is simply skipped by the update checker.
+            The URL below is a PLACEHOLDER; replace it with a real feed to enable updates.
+        -->
+        <meta-data
+            android:name="com.viperplayer.plugin.UPDATE_URL"
+            android:value="https://example.com/plugins/demo/update.json" />
     </application>
 
 </manifest>
